@@ -8,6 +8,19 @@ function getUserId(): string {
   return user;
 }
 
+function localISOString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? "+" : "-";
+  const hh = pad(Math.floor(Math.abs(offset) / 60));
+  const mm = pad(Math.abs(offset) % 60);
+  return (
+    date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) +
+    "T" + pad(date.getHours()) + ":" + pad(date.getMinutes()) + ":" + pad(date.getSeconds()) +
+    sign + hh + ":" + mm
+  );
+}
+
 export interface IngestResponse {
   intent: "ingest";
   matched_templates: string[];
@@ -25,7 +38,13 @@ export interface QueryResponse {
   related: Record<string, unknown>[];
 }
 
-export type ChatResponse = IngestResponse | QueryResponse;
+export interface InteractResponse {
+  intent: "interact";
+  answer: string;
+  confidence: string;
+}
+
+export type ChatResponse = IngestResponse | QueryResponse | InteractResponse;
 
 export interface Template {
   id: string;
@@ -42,7 +61,10 @@ export interface Entity {
   created_at: string;
 }
 
-export async function sendChat(text: string): Promise<ChatResponse> {
+export async function sendChat(
+  text: string,
+  context: { role: string; content: string }[] = []
+): Promise<ChatResponse> {
   const now = new Date();
   const res = await fetch(`${BASE_URL}/chat/`, {
     method: "POST",
@@ -50,8 +72,9 @@ export async function sendChat(text: string): Promise<ChatResponse> {
     body: JSON.stringify({
       text,
       user_id: getUserId(),
-      timestamp: now.toISOString(),
+      timestamp: localISOString(now),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      context,
     }),
   });
   if (!res.ok) throw new Error(await res.text());

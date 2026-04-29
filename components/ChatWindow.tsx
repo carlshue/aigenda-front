@@ -1,15 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { sendChat, IngestResponse, QueryResponse, ChatResponse } from "@/lib/api";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  data?: ChatResponse;
-  error?: string;
-}
+import { useRef, useEffect, useCallback, useState } from "react";
+import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse } from "@/lib/api";
+import { useChatContext, Message } from "@/lib/chat-context";
 
 function IngestResult({ data }: { data: IngestResponse }) {
   const hasSaved = data.saved_entities.length > 0;
@@ -130,7 +123,14 @@ function QueryResult({ data }: { data: QueryResponse }) {
   );
 }
 
-function IntentBadge({ intent }: { intent: "ingest" | "query" }) {
+function IntentBadge({ intent }: { intent: "ingest" | "generate" | "query" | "interact" }) {
+  const map = {
+    query:    { label: "Consulta",    color: "#818cf8", bg: "#818cf818" },
+    interact: { label: "Examen",      color: "#f59e0b", bg: "#f59e0b18" },
+    ingest:   { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
+    generate: { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
+  };
+  const { label, color, bg } = map[intent] ?? map.ingest;
   return (
     <span
       style={{
@@ -138,15 +138,15 @@ function IntentBadge({ intent }: { intent: "ingest" | "query" }) {
         fontWeight: 600,
         textTransform: "uppercase",
         letterSpacing: "0.06em",
-        color: intent === "ingest" ? "#34d399" : "#818cf8",
-        background: intent === "ingest" ? "#34d39918" : "#818cf818",
+        color,
+        background: bg,
         padding: "2px 7px",
         borderRadius: 4,
         marginBottom: 6,
         display: "inline-block",
       }}
     >
-      {intent === "ingest" ? "Almacenado" : "Consulta"}
+      {label}
     </span>
   );
 }
@@ -209,10 +209,14 @@ function MsgBubble({ msg }: { msg: Message }) {
           ) : msg.data ? (
             <>
               <IntentBadge intent={msg.data.intent} />
-              {msg.data.intent === "ingest" ? (
-                <IngestResult data={msg.data as IngestResponse} />
-              ) : (
+              {msg.data.intent === "query" ? (
                 <QueryResult data={msg.data as QueryResponse} />
+              ) : msg.data.intent === "interact" ? (
+                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
+                  {(msg.data as InteractResponse).answer}
+                </p>
+              ) : (
+                <IngestResult data={msg.data as IngestResponse} />
               )}
             </>
           ) : null}
@@ -248,9 +252,8 @@ function TypingIndicator() {
 }
 
 export default function ChatWindow() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, addMessage, getContextWindow, loading, setLoading } = useChatContext();
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -261,22 +264,24 @@ export default function ChatWindow() {
     const text = input.trim();
     if (!text || loading) return;
 
-    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text }]);
+    addMessage({ id: crypto.randomUUID(), role: "user", text });
     setInput("");
     setLoading(true);
 
     try {
-      const data = await sendChat(text);
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", text: "", data }]);
+      const data = await sendChat(text, getContextWindow());
+      addMessage({ id: crypto.randomUUID(), role: "assistant", text: "", data });
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { id: crypto.randomUUID(), role: "assistant", text: "", error: err instanceof Error ? err.message : "Error desconocido" },
-      ]);
+      addMessage({
+        id: crypto.randomUUID(),
+        role: "assistant",
+        text: "",
+        error: err instanceof Error ? err.message : "Error desconocido",
+      });
     } finally {
       setLoading(false);
     }
-  }, [input, loading]);
+  }, [input, loading, addMessage, getContextWindow, setLoading]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -287,7 +292,6 @@ export default function ChatWindow() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-base)" }}>
-      {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "32px 0" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
           {messages.length === 0 && !loading && (
@@ -311,7 +315,6 @@ export default function ChatWindow() {
         </div>
       </div>
 
-      {/* Input */}
       <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-sidebar)", padding: "16px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
           <div
