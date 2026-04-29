@@ -1,6 +1,6 @@
 import { getCurrentUser } from "./auth";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 function getUserId(): string {
   const user = getCurrentUser();
