@@ -2,6 +2,7 @@ const BASE_URL = "http://localhost:8000";
 export const USER_ID = "00000000-0000-0000-0000-000000000001";
 
 export interface IngestResponse {
+  intent: "ingest";
   matched_templates: string[];
   created_templates: { name: string; schema: Record<string, string> }[];
   evolved_templates: { name: string; new_fields: string[] }[];
@@ -10,12 +11,14 @@ export interface IngestResponse {
 }
 
 export interface QueryResponse {
+  intent: "query";
   answer: string;
-  confidence: number;
-  intent: string;
+  confidence: number | string;
   pivot: Record<string, unknown> | null;
   related: Record<string, unknown>[];
 }
+
+export type ChatResponse = IngestResponse | QueryResponse;
 
 export interface Template {
   id: string;
@@ -32,20 +35,17 @@ export interface Entity {
   created_at: string;
 }
 
-export async function ingestText(text: string): Promise<IngestResponse> {
-  const res = await fetch(
-    `${BASE_URL}/ingest/?text=${encodeURIComponent(text)}&user_id=${USER_ID}`,
-    { method: "POST" }
-  );
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-
-export async function queryText(query: string): Promise<QueryResponse> {
-  const res = await fetch(`${BASE_URL}/query/`, {
+export async function sendChat(text: string): Promise<ChatResponse> {
+  const now = new Date();
+  const res = await fetch(`${BASE_URL}/chat/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: USER_ID, query }),
+    body: JSON.stringify({
+      text,
+      user_id: USER_ID,
+      timestamp: now.toISOString(),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

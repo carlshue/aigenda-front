@@ -1,17 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ingestText, queryText, IngestResponse, QueryResponse } from "@/lib/api";
-
-type Mode = "ask" | "store";
+import { sendChat, IngestResponse, QueryResponse, ChatResponse } from "@/lib/api";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
-  mode: Mode;
   text: string;
-  ingestData?: IngestResponse;
-  queryData?: QueryResponse;
+  data?: ChatResponse;
   error?: string;
 }
 
@@ -22,11 +18,11 @@ function IngestResult({ data }: { data: IngestResponse }) {
   const hasErrors = data.errors.length > 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {hasSaved && (
         <div>
-          <p style={{ margin: "0 0 4px", fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Entidades guardadas
+          <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Guardado
           </p>
           {data.saved_entities.map((e) => (
             <div
@@ -35,14 +31,26 @@ function IngestResult({ data }: { data: IngestResponse }) {
                 background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 borderRadius: 6,
-                padding: "6px 10px",
+                padding: "7px 10px",
                 marginBottom: 4,
-                fontSize: 13,
               }}
             >
-              <span style={{ color: "var(--accent)", fontWeight: 600 }}>{e.template}</span>
-              <span style={{ color: "var(--text-muted)", marginLeft: 6, fontSize: 11 }}>({e.action})</span>
-              <pre style={{ margin: "4px 0 0", fontSize: 11, color: "var(--text-secondary)", whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>{e.template}</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: e.action === "created" ? "#34d399" : "#818cf8",
+                    background: e.action === "created" ? "#34d39918" : "#818cf818",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  {e.action === "created" ? "nuevo" : "actualizado"}
+                </span>
+              </div>
+              <pre style={{ margin: 0, fontSize: 11, color: "var(--text-secondary)", whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)" }}>
                 {JSON.stringify(e.data, null, 2)}
               </pre>
             </div>
@@ -51,13 +59,20 @@ function IngestResult({ data }: { data: IngestResponse }) {
       )}
       {hasCreated && (
         <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
-          Nuevos schemas: {data.created_templates.map((t) => <strong key={t.name} style={{ color: "var(--text-primary)" }}> {t.name}</strong>)}
+          Schemas creados:{" "}
+          {data.created_templates.map((t) => (
+            <strong key={t.name} style={{ color: "var(--text-primary)" }}>{t.name} </strong>
+          ))}
         </p>
       )}
       {hasEvolved && (
         <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
-          Schemas evolucionados: {data.evolved_templates.map((t) => (
-            <span key={t.name}> <strong style={{ color: "var(--text-primary)" }}>{t.name}</strong> (+{t.new_fields.join(", ")})</span>
+          Schemas evolucionados:{" "}
+          {data.evolved_templates.map((t) => (
+            <span key={t.name}>
+              <strong style={{ color: "var(--text-primary)" }}>{t.name}</strong>
+              <span style={{ color: "var(--text-muted)" }}> (+{t.new_fields.join(", ")})</span>{" "}
+            </span>
           ))}
         </p>
       )}
@@ -72,26 +87,23 @@ function IngestResult({ data }: { data: IngestResponse }) {
 }
 
 function QueryResult({ data }: { data: QueryResponse }) {
+  const confidence = typeof data.confidence === "number"
+    ? Math.round(data.confidence * 100)
+    : data.confidence;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "var(--text-primary)" }}>{data.answer}</p>
-
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        {data.confidence !== undefined && (
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Confianza: {Math.round(data.confidence * 100)}%
-          </span>
-        )}
-        {data.intent && (
-          <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-            Intent: {data.intent}
-          </span>
-        )}
-      </div>
-
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)" }}>
+        {data.answer}
+      </p>
+      {data.confidence !== undefined && (
+        <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+          Confianza: {confidence}{typeof data.confidence === "number" ? "%" : ""}
+        </span>
+      )}
       {data.related && data.related.length > 0 && (
         <div>
-          <p style={{ margin: "4px 0", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          <p style={{ margin: "4px 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Relacionados
           </p>
           {data.related.map((r, i) => (
@@ -118,6 +130,27 @@ function QueryResult({ data }: { data: QueryResponse }) {
   );
 }
 
+function IntentBadge({ intent }: { intent: "ingest" | "query" }) {
+  return (
+    <span
+      style={{
+        fontSize: 10,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.06em",
+        color: intent === "ingest" ? "#34d399" : "#818cf8",
+        background: intent === "ingest" ? "#34d39918" : "#818cf818",
+        padding: "2px 7px",
+        borderRadius: 4,
+        marginBottom: 6,
+        display: "inline-block",
+      }}
+    >
+      {intent === "ingest" ? "Almacenado" : "Consulta"}
+    </span>
+  );
+}
+
 function MsgBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === "user";
 
@@ -136,22 +169,6 @@ function MsgBubble({ msg }: { msg: Message }) {
             color: "var(--text-primary)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                color: msg.mode === "store" ? "#34d399" : "#818cf8",
-                background: msg.mode === "store" ? "#34d39918" : "#818cf818",
-                padding: "1px 6px",
-                borderRadius: 4,
-              }}
-            >
-              {msg.mode === "store" ? "Almacenar" : "Consultar"}
-            </span>
-          </div>
           {msg.text}
         </div>
       </div>
@@ -188,14 +205,17 @@ function MsgBubble({ msg }: { msg: Message }) {
           }}
         >
           {msg.error ? (
-            <p style={{ margin: 0, color: "#f87171" }}>Error: {msg.error}</p>
-          ) : msg.ingestData ? (
-            <IngestResult data={msg.ingestData} />
-          ) : msg.queryData ? (
-            <QueryResult data={msg.queryData} />
-          ) : (
-            <p style={{ margin: 0, color: "var(--text-secondary)" }}>{msg.text}</p>
-          )}
+            <p style={{ margin: 0, color: "#f87171", fontSize: 13 }}>Error: {msg.error}</p>
+          ) : msg.data ? (
+            <>
+              <IntentBadge intent={msg.data.intent} />
+              {msg.data.intent === "ingest" ? (
+                <IngestResult data={msg.data as IngestResponse} />
+              ) : (
+                <QueryResult data={msg.data as QueryResponse} />
+              )}
+            </>
+          ) : null}
         </div>
       </div>
     </div>
@@ -215,17 +235,14 @@ function TypingIndicator() {
           <span
             key={i}
             style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "var(--text-muted)",
-              display: "inline-block",
+              width: 6, height: 6, borderRadius: "50%",
+              background: "var(--text-muted)", display: "inline-block",
               animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite`,
             }}
           />
         ))}
       </div>
-      <style>{`@keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }`}</style>
+      <style>{`@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}`}</style>
     </div>
   );
 }
@@ -233,10 +250,8 @@ function TypingIndicator() {
 export default function ChatWindow() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [mode, setMode] = useState<Mode>("ask");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -246,51 +261,22 @@ export default function ChatWindow() {
     const text = input.trim();
     if (!text || loading) return;
 
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      role: "user",
-      mode,
-      text,
-    };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "user", text }]);
     setInput("");
     setLoading(true);
 
     try {
-      if (mode === "store") {
-        const data = await ingestText(text);
-        const assistantMsg: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          mode,
-          text: "",
-          ingestData: data,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-      } else {
-        const data = await queryText(text);
-        const assistantMsg: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          mode,
-          text: "",
-          queryData: data,
-        };
-        setMessages((prev) => [...prev, assistantMsg]);
-      }
+      const data = await sendChat(text);
+      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", text: "", data }]);
     } catch (err) {
-      const errorMsg: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        mode,
-        text: "",
-        error: err instanceof Error ? err.message : "Error desconocido",
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [
+        ...prev,
+        { id: crypto.randomUUID(), role: "assistant", text: "", error: err instanceof Error ? err.message : "Error desconocido" },
+      ]);
     } finally {
       setLoading(false);
     }
-  }, [input, mode, loading]);
+  }, [input, loading]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -299,14 +285,12 @@ export default function ChatWindow() {
     }
   };
 
-  const isEmpty = messages.length === 0;
-
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-base)" }}>
       {/* Messages */}
       <div style={{ flex: 1, overflowY: "auto", padding: "32px 0" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
-          {isEmpty && !loading && (
+          {messages.length === 0 && !loading && (
             <div style={{ textAlign: "center", paddingTop: 80 }}>
               <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
@@ -314,8 +298,8 @@ export default function ChatWindow() {
                 </svg>
               </div>
               <h2 style={{ margin: "0 0 8px", fontSize: 22, fontWeight: 600, color: "var(--text-primary)" }}>Genda</h2>
-              <p style={{ margin: 0, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7 }}>
-                Almacena información en modo <strong>Almacenar</strong> o haz consultas en modo <strong>Consultar</strong>.
+              <p style={{ margin: 0, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7, maxWidth: 360, marginInline: "auto" }}>
+                Escribe libremente. Genda detecta si quieres guardar información o hacer una consulta.
               </p>
             </div>
           )}
@@ -327,34 +311,9 @@ export default function ChatWindow() {
         </div>
       </div>
 
-      {/* Input area */}
+      {/* Input */}
       <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-sidebar)", padding: "16px 24px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto" }}>
-          {/* Mode toggle */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
-            {(["ask", "store"] as Mode[]).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMode(m)}
-                style={{
-                  padding: "4px 12px",
-                  borderRadius: 20,
-                  border: "1px solid",
-                  borderColor: mode === m ? "var(--accent)" : "var(--border)",
-                  background: mode === m ? "var(--accent-dim)" : "transparent",
-                  color: mode === m ? "var(--accent)" : "var(--text-muted)",
-                  fontSize: 12,
-                  fontWeight: mode === m ? 600 : 400,
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                {m === "ask" ? "Consultar" : "Almacenar"}
-              </button>
-            ))}
-          </div>
-
-          {/* Textarea + send */}
           <div
             style={{
               display: "flex",
@@ -367,11 +326,10 @@ export default function ChatWindow() {
             }}
           >
             <textarea
-              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={mode === "ask" ? "¿Qué quieres saber?" : "¿Qué quieres almacenar?"}
+              placeholder="Escribe algo para guardar o preguntar..."
               rows={1}
               style={{
                 flex: 1,
