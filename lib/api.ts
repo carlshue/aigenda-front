@@ -1,5 +1,12 @@
+import { getCurrentUser } from "./auth";
+
 const BASE_URL = "http://localhost:8000";
-export const USER_ID = "00000000-0000-0000-0000-000000000001";
+
+function getUserId(): string {
+  const user = getCurrentUser();
+  if (!user) throw new Error("No user logged in");
+  return user;
+}
 
 export interface IngestResponse {
   intent: "ingest";
@@ -42,7 +49,7 @@ export async function sendChat(text: string): Promise<ChatResponse> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       text,
-      user_id: USER_ID,
+      user_id: getUserId(),
       timestamp: now.toISOString(),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
@@ -52,18 +59,18 @@ export async function sendChat(text: string): Promise<ChatResponse> {
 }
 
 export async function getTemplates(): Promise<Template[]> {
-  const res = await fetch(`${BASE_URL}/templates/`);
+  const res = await fetch(`${BASE_URL}/templates/?user_id=${getUserId()}`);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  await fetch(`${BASE_URL}/templates/${id}`, { method: "DELETE" });
+  await fetch(`${BASE_URL}/templates/${id}?user_id=${getUserId()}`, { method: "DELETE" });
 }
 
 export async function getEntities(limit = 100): Promise<Entity[]> {
   const res = await fetch(
-    `${BASE_URL}/entities/?user_id=${USER_ID}&limit=${limit}`
+    `${BASE_URL}/entities/?user_id=${getUserId()}&limit=${limit}`
   );
   if (!res.ok) throw new Error(await res.text());
   return res.json();
@@ -73,7 +80,7 @@ export async function inferTemplate(description: string): Promise<Template> {
   const res = await fetch(`${BASE_URL}/templates/infer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ description }),
+    body: JSON.stringify({ description, user_id: getUserId() }),
   });
   if (!res.ok) throw new Error(await res.text());
   return res.json();

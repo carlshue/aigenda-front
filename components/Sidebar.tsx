@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { getCurrentUser, logout } from "@/lib/auth";
 
 const NAV_ITEMS = [
   {
@@ -10,6 +12,16 @@ const NAV_ITEMS = [
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/calendar",
+    label: "Calendario",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <path d="M16 2v4M8 2v4M3 10h18" />
       </svg>
     ),
   },
@@ -38,6 +50,17 @@ const NAV_ITEMS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentUser(getCurrentUser());
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   return (
     <aside
@@ -120,9 +143,46 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div style={{ marginTop: "auto", padding: "8px 10px", borderTop: "1px solid var(--border)" }}>
-        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0, paddingTop: 12 }}>
+        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 12px", paddingTop: 8 }}>
           LLM Memory & Agenda
         </p>
+        {currentUser && (
+          <>
+            <div
+              style={{
+                padding: "8px 10px",
+                borderRadius: 6,
+                background: "var(--bg-elevated)",
+                marginBottom: 8,
+              }}
+            >
+              <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase" }}>
+                Usuario actual
+              </p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0, textTransform: "capitalize" }}>
+                {currentUser}
+              </p>
+            </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                borderRadius: 6,
+                border: "1px solid var(--border)",
+                background: "var(--bg-surface)",
+                color: "var(--text-secondary)",
+                fontSize: 12,
+                cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-surface)")}
+            >
+              Cerrar sesión
+            </button>
+          </>
+        )}
       </div>
     </aside>
   );
