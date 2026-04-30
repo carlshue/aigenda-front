@@ -218,8 +218,10 @@ export default function CalendarView() {
                 id: evt.id,
                 template_id: template.id,
                 data: evt.data,
-                text: null,
+                original_text: null,
+                is_canonical: false,
                 created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
               },
               dateFieldName: "date",
             });
