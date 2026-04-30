@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getTemplates, getEntities, Template, Entity } from "@/lib/api";
+import { getTemplates, getEntities, getCalendarEvents, Template, Entity, CalendarEvent as ApiCalendarEvent } from "@/lib/api";
 
 interface CalendarEvent {
   id: string;
@@ -181,35 +181,70 @@ export default function CalendarView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [t, e] = await Promise.all([getTemplates(), getEntities()]);
+      const [t, e, apiEvents] = await Promise.all([
+        getTemplates(),
+        getEntities(),
+        getCalendarEvents().catch(() => []) // Si falla, usar array vacío
+      ]);
       setTemplates(t);
       setEntities(e);
 
       const extractedEvents: CalendarEvent[] = [];
       const templateMap = new Map(t.map((x) => [x.id, x]));
 
-      e.forEach((entity) => {
-        const dateInfo = extractDateFromEntity(entity);
-        if (dateInfo) {
-          const template = templateMap.get(entity.template_id);
+      if (apiEvents && apiEvents.length > 0) {
+        // Usar eventos del API
+        apiEvents.forEach((evt) => {
+          const template = t.find((x) => x.name === evt.template);
           if (template) {
             const colorIndex = t.findIndex((x) => x.id === template.id);
             const color = getColorForTemplate(template.name, colorIndex);
-            const title = extractTitleFromEntity(entity, template.name);
+            const dateMatch = String(evt.date).match(/^(\d{4}-\d{2}-\d{2})/);
+            const dateStr = dateMatch ? dateMatch[1] : evt.date;
 
             extractedEvents.push({
-              id: entity.id,
-              title,
-              date: dateInfo.date,
+              id: evt.id,
+              title: evt.title,
+              date: dateStr,
               template: template.id,
               templateName: template.name,
               color,
-              entity,
-              dateFieldName: dateInfo.fieldName,
+              entity: {
+                id: evt.id,
+                template_id: template.id,
+                data: evt.data,
+                text: null,
+                created_at: new Date().toISOString(),
+              },
+              dateFieldName: "date",
             });
           }
-        }
-      });
+        });
+      } else {
+        // Fallback: extraer fechas manualmente
+        e.forEach((entity) => {
+          const dateInfo = extractDateFromEntity(entity);
+          if (dateInfo) {
+            const template = templateMap.get(entity.template_id);
+            if (template) {
+              const colorIndex = t.findIndex((x) => x.id === template.id);
+              const color = getColorForTemplate(template.name, colorIndex);
+              const title = extractTitleFromEntity(entity, template.name);
+
+              extractedEvents.push({
+                id: entity.id,
+                title,
+                date: dateInfo.date,
+                template: template.id,
+                templateName: template.name,
+                color,
+                entity,
+                dateFieldName: dateInfo.fieldName,
+              });
+            }
+          }
+        });
+      }
 
       setEvents(extractedEvents);
     } catch (err) {

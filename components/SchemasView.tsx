@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getTemplates, getEntities, deleteTemplate, Template, Entity } from "@/lib/api";
+import { getTemplates, getEntities, deleteTemplate, getTemplatesStats, getEntityFacts, Template, Entity, TemplateStats, Fact } from "@/lib/api";
 
 function SchemaFieldBadge({ field, type }: { field: string; type: string }) {
   return (
@@ -26,21 +26,47 @@ function SchemaFieldBadge({ field, type }: { field: string; type: string }) {
 
 function EntityRow({ entity }: { entity: Entity }) {
   const [expanded, setExpanded] = useState(false);
+  const [factsExpanded, setFactsExpanded] = useState(false);
+  const [facts, setFacts] = useState<Fact[]>([]);
+  const [loadingFacts, setLoadingFacts] = useState(false);
   const fields = Object.entries(entity.data);
+
+  const loadFacts = useCallback(async () => {
+    if (factsExpanded) {
+      setFactsExpanded(false);
+      return;
+    }
+    setLoadingFacts(true);
+    try {
+      const data = await getEntityFacts(entity.id);
+      setFacts(data);
+      setFactsExpanded(true);
+    } catch (err) {
+      console.error("Error cargando relaciones:", err);
+    } finally {
+      setLoadingFacts(false);
+    }
+  }, [entity.id, factsExpanded]);
 
   return (
     <div
       style={{
         borderBottom: "1px solid var(--border)",
         padding: "8px 12px",
-        cursor: "pointer",
         transition: "background 0.1s",
       }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-      onClick={() => setExpanded((v) => !v)}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "pointer",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+        onClick={() => setExpanded((v) => !v)}
+      >
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flex: 1 }}>
           {fields.slice(0, 4).map(([k, v]) => (
             <span key={k} style={{ fontSize: 12, color: "var(--text-secondary)" }}>
@@ -72,21 +98,102 @@ function EntityRow({ entity }: { entity: Entity }) {
         </svg>
       </div>
       {expanded && (
-        <pre
-          style={{
-            margin: "8px 0 0",
-            fontSize: 11,
-            color: "var(--text-secondary)",
-            background: "var(--bg-base)",
-            border: "1px solid var(--border)",
-            borderRadius: 6,
-            padding: "8px 10px",
-            whiteSpace: "pre-wrap",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
-          {JSON.stringify(entity.data, null, 2)}
-        </pre>
+        <div style={{ marginTop: 8 }}>
+          <pre
+            style={{
+              margin: "0 0 8px",
+              fontSize: 11,
+              color: "var(--text-secondary)",
+              background: "var(--bg-base)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              padding: "8px 10px",
+              whiteSpace: "pre-wrap",
+              fontFamily: "var(--font-mono)",
+            }}
+          >
+            {JSON.stringify(entity.data, null, 2)}
+          </pre>
+          <button
+            onClick={loadFacts}
+            disabled={loadingFacts}
+            style={{
+              width: "100%",
+              padding: "6px 8px",
+              fontSize: 11,
+              border: "1px solid var(--border)",
+              borderRadius: 4,
+              background: "var(--bg-base)",
+              color: "var(--text-secondary)",
+              cursor: loadingFacts ? "not-allowed" : "pointer",
+              opacity: loadingFacts ? 0.6 : 1,
+            }}
+          >
+            {factsExpanded ? "Ocultar relaciones" : "Ver relaciones"}
+          </button>
+          {factsExpanded && (
+            <div style={{ marginTop: 8 }}>
+              {facts.length === 0 ? (
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-muted)", padding: "8px" }}>
+                  Sin relaciones
+                </p>
+              ) : (
+                facts.map((fact) => (
+                  <div
+                    key={fact.id}
+                    style={{
+                      padding: "6px 8px",
+                      marginBottom: 4,
+                      background: "var(--bg-base)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 4,
+                      fontSize: 11,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ color: "var(--accent)", fontWeight: 600 }}>
+                        {fact.predicate}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          background: "var(--bg-elevated)",
+                          padding: "1px 6px",
+                          borderRadius: 12,
+                          color: "var(--text-muted)",
+                        }}
+                      >
+                        {Math.round(fact.confidence * 100)}%
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 3 }}>
+                      {fact.object_data ? (
+                        <div>
+                          <span style={{ color: "var(--text-secondary)" }}>→ </span>
+                          {Object.entries(fact.object_data)
+                            .slice(0, 2)
+                            .map(([k, v]) => (
+                              <span key={k} style={{ marginRight: 8 }}>
+                                {k}:{" "}
+                                <span style={{ color: "var(--text-primary)" }}>
+                                  {typeof v === "object" ? JSON.stringify(v) : String(v)}
+                                </span>
+                              </span>
+                            ))}
+                        </div>
+                      ) : fact.object_value ? (
+                        <div>
+                          <span style={{ color: "var(--text-secondary)" }}>→ </span>
+                          <span style={{ color: "var(--text-primary)" }}>{fact.object_value}</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -95,20 +202,24 @@ function EntityRow({ entity }: { entity: Entity }) {
 function TemplateCard({
   template,
   entities,
+  stats,
   onDelete,
 }: {
   template: Template;
   entities: Entity[];
+  stats?: TemplateStats;
   onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const fields = Object.entries(template.schema);
   const templateEntities = entities.filter((e) => e.template_id === template.id);
+  const entitiesCount = stats?.entities_count ?? templateEntities.length;
+  const factsCount = stats?.facts_count ?? 0;
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`¿Eliminar el schema "${template.name}" y sus ${templateEntities.length} entidades?`)) return;
+    if (!confirm(`¿Eliminar el schema "${template.name}" y sus ${entitiesCount} entidades?`)) return;
     setDeleting(true);
     await deleteTemplate(template.id);
     onDelete(template.id);
@@ -143,18 +254,34 @@ function TemplateCard({
             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>
               {template.name}
             </h3>
-            <span
-              style={{
-                fontSize: 11,
-                color: "var(--text-muted)",
-                background: "var(--bg-elevated)",
-                padding: "1px 7px",
-                borderRadius: 20,
-                border: "1px solid var(--border)",
-              }}
-            >
-              {templateEntities.length} registros
-            </span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "var(--text-muted)",
+                  background: "var(--bg-elevated)",
+                  padding: "1px 7px",
+                  borderRadius: 20,
+                  border: "1px solid var(--border)",
+                }}
+              >
+                {entitiesCount} {entitiesCount === 1 ? "entidad" : "entidades"}
+              </span>
+              {factsCount > 0 && (
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-muted)",
+                    background: "var(--bg-elevated)",
+                    padding: "1px 7px",
+                    borderRadius: 20,
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  {factsCount} {factsCount === 1 ? "relación" : "relaciones"}
+                </span>
+              )}
+            </div>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {fields.map(([k, v]) => (
@@ -227,6 +354,7 @@ function TemplateCard({
 
 export default function SchemasView() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [templateStats, setTemplateStats] = useState<TemplateStats[]>([]);
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,6 +366,15 @@ export default function SchemasView() {
       const [t, e] = await Promise.all([getTemplates(), getEntities()]);
       setTemplates(t);
       setEntities(e);
+
+      // Cargar stats si está disponible
+      try {
+        const stats = await getTemplatesStats();
+        setTemplateStats(stats);
+      } catch {
+        // Si falla, usar datos locales de entidades
+        setTemplateStats([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error cargando datos");
     } finally {
@@ -343,14 +480,18 @@ export default function SchemasView() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {templates.map((template) => (
-              <TemplateCard
-                key={template.id}
-                template={template}
-                entities={entities}
-                onDelete={handleDelete}
-              />
-            ))}
+            {templates.map((template) => {
+              const stats = templateStats.find((s) => s.id === template.id);
+              return (
+                <TemplateCard
+                  key={template.id}
+                  template={template}
+                  entities={entities}
+                  stats={stats}
+                  onDelete={handleDelete}
+                />
+              );
+            })}
           </div>
         )}
       </div>

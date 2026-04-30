@@ -5,19 +5,24 @@ import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse
 import { useChatContext, Message } from "@/lib/chat-context";
 
 function IngestResult({ data }: { data: IngestResponse }) {
-  const hasSaved = data.saved_entities.length > 0;
-  const hasCreated = data.created_templates.length > 0;
-  const hasEvolved = data.evolved_templates.length > 0;
-  const hasErrors = data.errors.length > 0;
+  const hasCreated = data.entities_created.length > 0;
+  const hasUpdated = data.entities_updated.length > 0;
+  const hasFacts = data.facts_created.length > 0;
+  const hasTemplates = data.templates_created.length > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {hasSaved && (
+      {data.message && (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", fontStyle: "italic" }}>
+          {data.message}
+        </p>
+      )}
+      {hasCreated && (
         <div>
           <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            Guardado
+            Entidades creadas
           </p>
-          {data.saved_entities.map((e) => (
+          {data.entities_created.map((e) => (
             <div
               key={e.id}
               style={{
@@ -33,14 +38,14 @@ function IngestResult({ data }: { data: IngestResponse }) {
                 <span
                   style={{
                     fontSize: 10,
-                    color: e.action === "created" ? "#34d399" : "#818cf8",
-                    background: e.action === "created" ? "#34d39918" : "#818cf818",
+                    color: "#34d399",
+                    background: "#34d39918",
                     padding: "1px 6px",
                     borderRadius: 4,
                     fontWeight: 600,
                   }}
                 >
-                  {e.action === "created" ? "nuevo" : "actualizado"}
+                  nuevo
                 </span>
               </div>
               <pre style={{ margin: 0, fontSize: 11, color: "var(--text-secondary)", whiteSpace: "pre-wrap", fontFamily: "var(--font-mono)" }}>
@@ -50,30 +55,88 @@ function IngestResult({ data }: { data: IngestResponse }) {
           ))}
         </div>
       )}
-      {hasCreated && (
+      {hasUpdated && (
+        <div>
+          <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Entidades actualizadas
+          </p>
+          {data.entities_updated.map((e) => (
+            <div
+              key={e.id}
+              style={{
+                background: "var(--bg-base)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "7px 10px",
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>{e.template}</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "#818cf8",
+                    background: "#818cf818",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  actualizado
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {hasFacts && (
+        <div>
+          <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Relaciones creadas
+          </p>
+          {data.facts_created.map((f) => (
+            <div
+              key={f.id}
+              style={{
+                background: "var(--bg-base)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "7px 10px",
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>{f.predicate}</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "#8b5cf6",
+                    background: "#8b5cf618",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  {Math.round(f.confidence * 100)}%
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {hasTemplates && (
         <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
           Schemas creados:{" "}
-          {data.created_templates.map((t) => (
-            <strong key={t.name} style={{ color: "var(--text-primary)" }}>{t.name} </strong>
+          {data.templates_created.map((t, i) => (
+            <strong key={t} style={{ color: "var(--text-primary)" }}>
+              {t}{i < data.templates_created.length - 1 ? ", " : ""}
+            </strong>
           ))}
         </p>
       )}
-      {hasEvolved && (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
-          Schemas evolucionados:{" "}
-          {data.evolved_templates.map((t) => (
-            <span key={t.name}>
-              <strong style={{ color: "var(--text-primary)" }}>{t.name}</strong>
-              <span style={{ color: "var(--text-muted)" }}> (+{t.new_fields.join(", ")})</span>{" "}
-            </span>
-          ))}
-        </p>
-      )}
-      {hasErrors && (
-        <p style={{ margin: 0, fontSize: 12, color: "#f87171" }}>Errores: {data.errors.join(", ")}</p>
-      )}
-      {!hasSaved && !hasErrors && (
-        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Sin entidades nuevas.</p>
+      {!hasCreated && !hasUpdated && !hasFacts && (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Sin cambios.</p>
       )}
     </div>
   );

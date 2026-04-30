@@ -36,8 +36,10 @@ function serializeAssistant(msg: Message): string {
   const d = msg.data;
   if (d.intent === "query") return `[consulta] ${d.answer}`;
   if (d.intent === "interact") return `[examen] ${d.answer}`;
-  const saved = d.saved_entities.map((e) => `${e.template}: ${JSON.stringify(e.data)}`).join("; ");
-  return `[guardado] ${saved || "sin entidades"}`;
+  const created = (d.entities_created || []).map((e) => `${e.template}: ${JSON.stringify(e.data)}`).join("; ");
+  const updated = (d.entities_updated || []).map((e) => `${e.template} (upd)`).join("; ");
+  const all = [created, updated].filter(Boolean).join("; ");
+  return `[guardado] ${all || "sin cambios"}`;
 }
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
