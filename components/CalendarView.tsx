@@ -86,6 +86,11 @@ function extractDateFromEntity(entity: Entity): { fieldName: string; date: strin
   return null;
 }
 
+function localDateStr(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function DayCell({
   date,
   events,
@@ -97,9 +102,9 @@ function DayCell({
   selected: boolean;
   onSelect: (date: Date) => void;
 }) {
-  const dateStr = date.toISOString().split("T")[0];
+  const dateStr = localDateStr(date);
   const dayEvents = events.filter((e) => e.date === dateStr);
-  const isToday = dateStr === new Date().toISOString().split("T")[0];
+  const isToday = dateStr === localDateStr(new Date());
   const isCurrentMonth = date.getMonth() === new Date().getMonth();
 
   return (
@@ -290,7 +295,7 @@ export default function CalendarView() {
 
   const monthName = currentDate.toLocaleString("es-ES", { month: "long", year: "numeric" });
 
-  const selectedDateStr = selectedDate ? selectedDate.toISOString().split("T")[0] : null;
+  const selectedDateStr = selectedDate ? localDateStr(selectedDate) : null;
   const selectedDayEvents = selectedDateStr ? events.filter((e) => e.date === selectedDateStr) : [];
   const selectedDayName = selectedDate
     ? selectedDate.toLocaleString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
@@ -510,7 +515,7 @@ export default function CalendarView() {
                       key={date.toISOString()}
                       date={date}
                       events={events}
-                      selected={selectedDateStr === date.toISOString().split("T")[0]}
+                      selected={selectedDateStr === localDateStr(date)}
                       onSelect={setSelectedDate}
                     />
                   ))}
