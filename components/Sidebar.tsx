@@ -52,9 +52,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setCurrentUser(getCurrentUser());
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   const handleLogout = () => {
@@ -65,18 +73,19 @@ export default function Sidebar() {
   return (
     <aside
       style={{
-        width: 220,
+        width: isMobile ? 56 : 220,
         background: "var(--bg-sidebar)",
         borderRight: "1px solid var(--border)",
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
-        padding: "20px 12px",
+        padding: isMobile ? "20px 8px" : "20px 12px",
         gap: 4,
+        transition: "width 0.2s",
       }}
     >
       {/* Logo */}
-      <div style={{ padding: "4px 8px 24px", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ padding: "4px 8px 24px", display: "flex", alignItems: "center", justifyContent: isMobile ? "center" : "flex-start", gap: 10 }}>
         <div
           style={{
             width: 32,
@@ -93,9 +102,11 @@ export default function Sidebar() {
             <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm0 3a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm0 14.5c-2.5 0-4.71-1.28-6-3.22.03-2 4-3.08 6-3.08 1.99 0 5.97 1.08 6 3.08a7.17 7.17 0 0 1-6 3.22z" />
           </svg>
         </div>
-        <span style={{ fontWeight: 700, fontSize: 17, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
-          Genda
-        </span>
+        {!isMobile && (
+          <span style={{ fontWeight: 700, fontSize: 17, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
+            Genda
+          </span>
+        )}
       </div>
 
       {/* Nav items */}
@@ -106,10 +117,12 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              title={isMobile ? item.label : undefined}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
+                justifyContent: isMobile ? "center" : "flex-start",
+                gap: isMobile ? 0 : 10,
                 padding: "9px 10px",
                 borderRadius: 8,
                 textDecoration: "none",
@@ -135,55 +148,57 @@ export default function Sidebar() {
               <span style={{ color: active ? "var(--accent)" : "inherit", display: "flex" }}>
                 {item.icon}
               </span>
-              {item.label}
+              {!isMobile && item.label}
             </Link>
           );
         })}
       </nav>
 
       {/* Footer */}
-      <div style={{ marginTop: "auto", padding: "8px 10px", borderTop: "1px solid var(--border)" }}>
-        <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 12px", paddingTop: 8 }}>
-          LLM Memory & Agenda
-        </p>
-        {currentUser && (
-          <>
-            <div
-              style={{
-                padding: "8px 10px",
-                borderRadius: 6,
-                background: "var(--bg-elevated)",
-                marginBottom: 8,
-              }}
-            >
-              <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase" }}>
-                Usuario actual
-              </p>
-              <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0, textTransform: "capitalize" }}>
-                {currentUser}
-              </p>
-            </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: "100%",
-                padding: "6px 10px",
-                borderRadius: 6,
-                border: "1px solid var(--border)",
-                background: "var(--bg-surface)",
-                color: "var(--text-secondary)",
-                fontSize: 12,
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-surface)")}
-            >
-              Cerrar sesión
-            </button>
-          </>
-        )}
-      </div>
+      {!isMobile && (
+        <div style={{ marginTop: "auto", padding: "8px 10px", borderTop: "1px solid var(--border)" }}>
+          <p style={{ fontSize: 11, color: "var(--text-muted)", margin: "0 0 12px", paddingTop: 8 }}>
+            LLM Memory & Agenda
+          </p>
+          {currentUser && (
+            <>
+              <div
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 6,
+                  background: "var(--bg-elevated)",
+                  marginBottom: 8,
+                }}
+              >
+                <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", textTransform: "uppercase" }}>
+                  Usuario actual
+                </p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0, textTransform: "capitalize" }}>
+                  {currentUser}
+                </p>
+              </div>
+              <button
+                onClick={handleLogout}
+                style={{
+                  width: "100%",
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-surface)",
+                  color: "var(--text-secondary)",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-surface)")}
+              >
+                Cerrar sesión
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </aside>
   );
 }
