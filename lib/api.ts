@@ -21,13 +21,20 @@ function localISOString(date: Date): string {
   );
 }
 
+export interface TokenUsage {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export interface IngestResponse {
-  intent: "ingest";
+  intent: "ingest" | "generate" | "update";
   entities_created: { id: string; template: string; data: Record<string, unknown> }[];
-  entities_updated: { id: string; template: string }[];
+  entities_updated: { id: string; template: string | Record<string, unknown> }[];
   facts_created: { id: string; subject_id: string; predicate: string; object_id?: string; object_value?: string; confidence: number }[];
   templates_created: string[];
   message: string;
+  usage?: TokenUsage;
 }
 
 export interface QueryResponse {
@@ -36,12 +43,14 @@ export interface QueryResponse {
   confidence: number | string;
   pivot: Record<string, unknown> | null;
   related: Record<string, unknown>[];
+  usage?: TokenUsage;
 }
 
 export interface InteractResponse {
   intent: "interact";
   answer: string;
   confidence: string;
+  usage?: TokenUsage;
 }
 
 export type ChatResponse = IngestResponse | QueryResponse | InteractResponse;

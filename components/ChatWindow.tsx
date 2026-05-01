@@ -1,8 +1,26 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse } from "@/lib/api";
+import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse, TokenUsage } from "@/lib/api";
 import { useChatContext, Message } from "@/lib/chat-context";
+
+function TokenBadge({ usage }: { usage: TokenUsage }) {
+  return (
+    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+      <span title="Tokens enviados al modelo" style={{ fontSize: 10, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        {usage.prompt_tokens.toLocaleString()}
+      </span>
+      <span title="Tokens generados por el modelo" style={{ fontSize: 10, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        {usage.completion_tokens.toLocaleString()}
+      </span>
+      <span title="Total de tokens consumidos" style={{ fontSize: 10, color: "var(--text-muted)" }}>
+        · {usage.total_tokens.toLocaleString()} tok
+      </span>
+    </div>
+  );
+}
 
 function IngestResult({ data }: { data: IngestResponse }) {
   const created = data.entities_created ?? [];
@@ -285,6 +303,7 @@ function MsgBubble({ msg }: { msg: Message }) {
               ) : (
                 <IngestResult data={msg.data as IngestResponse} />
               )}
+              {msg.data.usage && <TokenBadge usage={msg.data.usage} />}
             </>
           ) : null}
         </div>
