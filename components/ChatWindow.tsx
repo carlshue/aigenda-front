@@ -212,15 +212,21 @@ function QueryResult({ data }: { data: QueryResponse }) {
     </div>
   );
 }
-
-function IntentBadge({ intent }: { intent: "ingest" | "generate" | "query" | "interact" }) {
+function IntentBadge({
+  intent,
+}: {
+  intent: "ingest" | "generate" | "update" | "query" | "interact";
+}) {
   const map = {
     query:    { label: "Consulta",    color: "#818cf8", bg: "#818cf818" },
     interact: { label: "Examen",      color: "#f59e0b", bg: "#f59e0b18" },
     ingest:   { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
     generate: { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
+    update:   { label: "Actualizado", color: "#22c55e", bg: "#22c55e18" },
   };
+
   const { label, color, bg } = map[intent] ?? map.ingest;
+
   return (
     <span
       style={{
