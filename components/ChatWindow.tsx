@@ -5,10 +5,14 @@ import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse
 import { useChatContext, Message } from "@/lib/chat-context";
 
 function IngestResult({ data }: { data: IngestResponse }) {
-  const hasCreated = data.entities_created.length > 0;
-  const hasUpdated = data.entities_updated.length > 0;
-  const hasFacts = data.facts_created.length > 0;
-  const hasTemplates = data.templates_created.length > 0;
+  const created = data.entities_created ?? [];
+  const updated = data.entities_updated ?? [];
+  const facts = data.facts_created ?? [];
+  const templates = data.templates_created ?? [];
+  const hasCreated = created.length > 0;
+  const hasUpdated = updated.length > 0;
+  const hasFacts = facts.length > 0;
+  const hasTemplates = templates.length > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -22,7 +26,7 @@ function IngestResult({ data }: { data: IngestResponse }) {
           <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Entidades creadas
           </p>
-          {data.entities_created.map((e) => (
+          {created.map((e) => (
             <div
               key={e.id}
               style={{
@@ -60,7 +64,7 @@ function IngestResult({ data }: { data: IngestResponse }) {
           <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Entidades actualizadas
           </p>
-          {data.entities_updated.map((e) => (
+          {updated.map((e) => (
             <div
               key={e.id}
               style={{
@@ -95,7 +99,7 @@ function IngestResult({ data }: { data: IngestResponse }) {
           <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
             Relaciones creadas
           </p>
-          {data.facts_created.map((f) => (
+          {facts.map((f) => (
             <div
               key={f.id}
               style={{
@@ -128,9 +132,9 @@ function IngestResult({ data }: { data: IngestResponse }) {
       {hasTemplates && (
         <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
           Schemas creados:{" "}
-          {data.templates_created.map((t, i) => (
+          {templates.map((t, i) => (
             <strong key={t} style={{ color: "var(--text-primary)" }}>
-              {t}{i < data.templates_created.length - 1 ? ", " : ""}
+              {t}{i < templates.length - 1 ? ", " : ""}
             </strong>
           ))}
         </p>
@@ -186,14 +190,21 @@ function QueryResult({ data }: { data: QueryResponse }) {
   );
 }
 
-function IntentBadge({ intent }: { intent: "ingest" | "generate" | "query" | "interact" }) {
+function IntentBadge({
+  intent,
+}: {
+  intent: "ingest" | "generate" | "update" | "query" | "interact";
+}) {
   const map = {
     query:    { label: "Consulta",    color: "#818cf8", bg: "#818cf818" },
     interact: { label: "Examen",      color: "#f59e0b", bg: "#f59e0b18" },
     ingest:   { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
     generate: { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
+    update:   { label: "Actualizado", color: "#22c55e", bg: "#22c55e18" },
   };
+
   const { label, color, bg } = map[intent] ?? map.ingest;
+
   return (
     <span
       style={{
