@@ -1,3 +1,7 @@
+"use client";
+
+import { useIsMobile } from "@/lib/useIsMobile";
+
 const PLACEHOLDER_CARDS = [
   {
     title: "Gastos por categoría",
@@ -44,9 +48,10 @@ const PLACEHOLDER_CARDS = [
 ];
 
 export default function DashboardsView() {
+  const isMobile = useIsMobile();
   return (
-    <div style={{ height: "100%", overflowY: "auto", padding: "32px 0" }}>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 32px" }}>
+    <div style={{ height: "100%", overflowY: "auto", padding: isMobile ? "16px 0" : "32px 0" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: isMobile ? "0 16px" : "0 32px" }}>
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
@@ -78,7 +83,7 @@ export default function DashboardsView() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fill, minmax(280px, 1fr))",
             gap: 16,
           }}
         >

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getTemplates, getEntities, deleteTemplate, getTemplatesStats, getEntityFacts, Template, Entity, TemplateStats, Fact } from "@/lib/api";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 function SchemaFieldBadge({ field, type }: { field: string; type: string }) {
   return (
@@ -358,6 +359,7 @@ export default function SchemasView() {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -392,8 +394,8 @@ export default function SchemasView() {
   };
 
   return (
-    <div style={{ height: "100%", overflowY: "auto", padding: "32px 0" }}>
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "0 32px" }}>
+    <div style={{ height: "100%", overflowY: "auto", padding: isMobile ? "16px 0" : "32px 0" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: isMobile ? "0 16px" : "0 32px" }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
           <div>

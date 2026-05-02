@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse, TokenUsage } from "@/lib/api";
 import { useChatContext, Message } from "@/lib/chat-context";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 function TokenBadge({ usage }: { usage: TokenUsage }) {
   return (
@@ -238,13 +239,14 @@ function IntentBadge({ intent }: { intent: "ingest" | "generate" | "query" | "in
 
 function MsgBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === "user";
+  const isMobile = useIsMobile();
 
   if (isUser) {
     return (
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
         <div
           style={{
-            maxWidth: "72%",
+            maxWidth: isMobile ? "90%" : "72%",
             background: "var(--user-bubble)",
             border: "1px solid var(--user-bubble-border)",
             borderRadius: "16px 16px 4px 16px",
@@ -262,7 +264,7 @@ function MsgBubble({ msg }: { msg: Message }) {
 
   return (
     <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 20 }}>
-      <div style={{ display: "flex", gap: 10, maxWidth: "82%" }}>
+      <div style={{ display: "flex", gap: 10, maxWidth: isMobile ? "90%" : "82%" }}>
         <div
           style={{
             width: 28,
@@ -339,6 +341,7 @@ function TypingIndicator() {
 
 export default function ChatWindow() {
   const { messages, addMessage, getContextWindow, loading, setLoading } = useChatContext();
+  const isMobile = useIsMobile();
   const [input, setInput] = useState("");
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
@@ -408,7 +411,7 @@ export default function ChatWindow() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-base)" }}>
       <div style={{ flex: 1, overflowY: "auto", padding: "32px 0" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 24px" }}>
+        <div style={{ maxWidth: isMobile ? "100%" : 720, margin: "0 auto", padding: isMobile ? "0 12px" : "0 24px" }}>
           {messages.length === 0 && !loading && (
             <div style={{ textAlign: "center", paddingTop: 80 }}>
               <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
@@ -430,8 +433,8 @@ export default function ChatWindow() {
         </div>
       </div>
 
-      <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-sidebar)", padding: "16px 24px" }}>
-        <div style={{ maxWidth: 720, margin: "0 auto" }}>
+      <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg-sidebar)", padding: isMobile ? "12px" : "16px 24px" }}>
+        <div style={{ maxWidth: isMobile ? "100%" : 720, margin: "0 auto" }}>
           <div
             style={{
               display: "flex",

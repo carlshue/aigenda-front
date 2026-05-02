@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getTemplates, getEntities, getCalendarEvents, Template, Entity, CalendarEvent as ApiCalendarEvent } from "@/lib/api";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 interface CalendarEvent {
   id: string;
@@ -182,6 +183,7 @@ export default function CalendarView() {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -306,7 +308,7 @@ export default function CalendarView() {
   return (
     <div style={{ display: "flex", height: "100%", background: "var(--bg-base)" }}>
       {/* Calendario */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "16px" : "24px" }}>
         <div style={{ maxWidth: 900 }}>
           {/* Header */}
           <div style={{ marginBottom: 24 }}>
@@ -319,7 +321,7 @@ export default function CalendarView() {
           </div>
 
           {/* Controls */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, gap: 8, flexWrap: isMobile ? "wrap" : "nowrap" }}>
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={prevMonth}
@@ -529,7 +531,7 @@ export default function CalendarView() {
       </div>
 
       {/* Sidebar con detalles del día */}
-      <div
+      {!isMobile && <div
         style={{
           width: 340,
           borderLeft: "1px solid var(--border)",
@@ -671,7 +673,7 @@ export default function CalendarView() {
             <p style={{ margin: 0, fontSize: 13 }}>Selecciona un día para ver sus eventos</p>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
