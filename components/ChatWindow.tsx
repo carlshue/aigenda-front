@@ -95,7 +95,11 @@ function IngestResult({ data }: { data: IngestResponse }) {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>{e.template}</span>
+                <span style={{ fontWeight: 600, color: "var(--accent)" }}>
+                  {typeof e.template === "string"
+                    ? e.template
+                    : JSON.stringify(e.template)}
+                </span>
                 <span
                   style={{
                     fontSize: 10,
