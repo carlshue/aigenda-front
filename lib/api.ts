@@ -53,7 +53,15 @@ export interface InteractResponse {
   usage?: TokenUsage;
 }
 
-export type ChatResponse = IngestResponse | QueryResponse | InteractResponse;
+export interface DeleteResponse {
+  intent: "delete";
+  entities_deleted: { id: string; template: string }[];
+  facts_deleted: number;
+  message: string;
+  usage?: TokenUsage;
+}
+
+export type ChatResponse = IngestResponse | QueryResponse | InteractResponse | DeleteResponse;
 
 export interface Template {
   id: string;

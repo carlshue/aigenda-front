@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse, TokenUsage } from "@/lib/api";
+import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse, TokenUsage, DeleteResponse } from "@/lib/api";
 import { useChatContext, Message } from "@/lib/chat-context";
 import { useIsMobile } from "@/lib/useIsMobile";
 
@@ -169,6 +169,59 @@ function IngestResult({ data }: { data: IngestResponse }) {
   );
 }
 
+function DeleteResult({ data }: { data: DeleteResponse }) {
+  const deleted = data.entities_deleted ?? [];
+  const hasDeleted = deleted.length > 0;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {data.message && (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", fontStyle: "italic" }}>
+          {data.message}
+        </p>
+      )}
+      {hasDeleted && (
+        <div>
+          <p style={{ margin: "0 0 6px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Entidades eliminadas
+          </p>
+          {deleted.map((e: { id: string; template: string }) => (
+            <div
+              key={e.id}
+              style={{
+                background: "var(--bg-base)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "7px 10px",
+                marginBottom: 4,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>{e.template}</span>
+                <span
+                  style={{
+                    fontSize: 10,
+                    color: "#ef4444",
+                    background: "#ef444418",
+                    padding: "1px 6px",
+                    borderRadius: 4,
+                    fontWeight: 600,
+                  }}
+                >
+                  eliminado
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {!hasDeleted && (
+        <p style={{ margin: 0, fontSize: 13, color: "var(--text-muted)" }}>Sin cambios.</p>
+      )}
+    </div>
+  );
+}
+
 function QueryResult({ data }: { data: QueryResponse }) {
   const confidence = typeof data.confidence === "number"
     ? Math.round(data.confidence * 100)
@@ -215,7 +268,7 @@ function QueryResult({ data }: { data: QueryResponse }) {
 function IntentBadge({
   intent,
 }: {
-  intent: "ingest" | "generate" | "update" | "query" | "interact";
+  intent: "ingest" | "generate" | "update" | "query" | "interact" | "delete";
 }) {
   const map = {
     query:    { label: "Consulta",    color: "#818cf8", bg: "#818cf818" },
@@ -223,6 +276,7 @@ function IntentBadge({
     ingest:   { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
     generate: { label: "Almacenado",  color: "#34d399", bg: "#34d39918" },
     update:   { label: "Actualizado", color: "#22c55e", bg: "#22c55e18" },
+    delete:   { label: "Eliminado",   color: "#ef4444", bg: "#ef444418" },
   };
 
   const { label, color, bg } = map[intent] ?? map.ingest;
@@ -306,15 +360,22 @@ function MsgBubble({ msg }: { msg: Message }) {
           ) : msg.data ? (
             <>
               <IntentBadge intent={msg.data.intent} />
-              {msg.data.intent === "query" ? (
-                <QueryResult data={msg.data as QueryResponse} />
-              ) : msg.data.intent === "interact" ? (
-                <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
-                  {(msg.data as InteractResponse).answer}
-                </p>
-              ) : (
-                <IngestResult data={msg.data as IngestResponse} />
-              )}
+              {(() => {
+                if (msg.data.intent === "query") {
+                  return <QueryResult data={msg.data as QueryResponse} />;
+                }
+                if (msg.data.intent === "interact") {
+                  return (
+                    <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
+                      {(msg.data as InteractResponse).answer}
+                    </p>
+                  );
+                }
+                if (msg.data.intent === "delete") {
+                  return <DeleteResult data={msg.data as DeleteResponse} />;
+                }
+                return <IngestResult data={msg.data as IngestResponse} />;
+              })()}
               {msg.data.usage && <TokenBadge usage={msg.data.usage} />}
             </>
           ) : null}
