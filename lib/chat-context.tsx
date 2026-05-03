@@ -36,8 +36,13 @@ function serializeAssistant(msg: Message): string {
   const d = msg.data;
   if (d.intent === "query") return `[consulta] ${d.answer}`;
   if (d.intent === "interact") return `[examen] ${d.answer}`;
-  const created = (d.entities_created || []).map((e) => `${e.template}: ${JSON.stringify(e.data)}`).join("; ");
-  const updated = (d.entities_updated || []).map((e) => `${e.template} (upd)`).join("; ");
+  if (d.intent === "delete") {
+    const entities = "entities_deleted" in d ? (d.entities_deleted || []).map((e) => e.template).join(", ") : "";
+    const facts = "facts_deleted" in d ? d.facts_deleted : 0;
+    return `[eliminado] ${entities || "relaciones"}: ${facts} facts`;
+  }
+  const created = ("entities_created" in d ? d.entities_created : []).map((e) => `${e.template}: ${JSON.stringify(e.data)}`).join("; ");
+  const updated = ("entities_updated" in d ? d.entities_updated : []).map((e) => `${e.template} (upd)`).join("; ");
   const all = [created, updated].filter(Boolean).join("; ");
   return `[guardado] ${all || "sin cambios"}`;
 }
