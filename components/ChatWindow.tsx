@@ -222,6 +222,81 @@ function DeleteResult({ data }: { data: DeleteResponse }) {
   );
 }
 
+function DataTable({ table }: { table: { template: string; row_count: number; columns: string[]; rows: Record<string, unknown>[] } }) {
+  const maxCellWidth = 140;
+  const isMobile = useIsMobile();
+  // Ocultar columna ID para mejor legibilidad
+  const visibleColumns = table.columns.filter((col) => col !== "id");
+
+  return (
+    <div style={{ marginTop: 12, marginBottom: 12 }}>
+      <p style={{ margin: "0 0 8px", fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+        {table.template} ({table.row_count} {table.row_count === 1 ? "resultado" : "resultados"})
+      </p>
+      <div style={{ overflowX: "auto", borderRadius: 6, border: "1px solid var(--border)", background: "var(--bg-base)" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)" }}>
+              {visibleColumns.map((col) => (
+                <th
+                  key={col}
+                  style={{
+                    padding: "8px 10px",
+                    textAlign: "left",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "var(--text-secondary)",
+                    maxWidth: isMobile ? 80 : maxCellWidth,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                  title={col}
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row, idx) => (
+              <tr
+                key={idx}
+                style={{
+                  borderBottom: idx < table.rows.length - 1 ? "1px solid var(--border)" : "none",
+                  background: idx % 2 === 0 ? "transparent" : "var(--bg-elevated)",
+                }}
+              >
+                {visibleColumns.map((col) => {
+                  const value = row[col];
+                  const displayValue = value === null || value === undefined ? "—" : String(value);
+
+                  return (
+                    <td
+                      key={col}
+                      style={{
+                        padding: "8px 10px",
+                        color: "var(--text-primary)",
+                        maxWidth: isMobile ? 80 : maxCellWidth,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={displayValue}
+                    >
+                      {displayValue}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function QueryResult({ data }: { data: QueryResponse }) {
   const confidence = typeof data.confidence === "number"
     ? Math.round(data.confidence * 100)
@@ -236,6 +311,13 @@ function QueryResult({ data }: { data: QueryResponse }) {
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
           Confianza: {confidence}{typeof data.confidence === "number" ? "%" : ""}
         </span>
+      )}
+      {data.tables && data.tables.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          {data.tables.map((table) => (
+            <DataTable key={table.template} table={table} />
+          ))}
+        </div>
       )}
       {data.related && data.related.length > 0 && (
         <div>

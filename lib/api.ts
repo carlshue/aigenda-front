@@ -43,6 +43,12 @@ export interface QueryResponse {
   confidence: number | string;
   pivot: Record<string, unknown> | null;
   related: Record<string, unknown>[];
+  tables?: Array<{
+    template: string;
+    row_count: number;
+    columns: string[];
+    rows: Record<string, unknown>[];
+  }>;
   usage?: TokenUsage;
 }
 

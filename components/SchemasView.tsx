@@ -220,7 +220,7 @@ function TemplateCard({
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm(`¿Eliminar el schema "${template.name}" y sus ${entitiesCount} entidades?`)) return;
+    //if (!confirm(`¿Eliminar el schema "${template.name}" y sus ${entitiesCount} entidades?`)) return;
     setDeleting(true);
     await deleteTemplate(template.id);
     onDelete(template.id);
