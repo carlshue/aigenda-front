@@ -229,8 +229,8 @@ function QueryResult({ data }: { data: QueryResponse }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)" }}>
-        {data.answer}
+      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.7, color: "var(--text-primary)", whiteSpace: "pre-wrap" }}>
+        {renderTextWithBold(data.answer)}
       </p>
       {data.confidence !== undefined && (
         <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
@@ -301,6 +301,16 @@ function IntentBadge({
   );
 }
 
+function renderTextWithBold(text: string) {
+  const parts = text.split(/(\*\*[^\*]+\*\*)/);
+  return parts.map((part, idx) => {
+    if (part.match(/^\*\*[^\*]+\*\*$/)) {
+      return <strong key={idx}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={idx}>{part}</span>;
+  });
+}
+
 function MsgBubble({ msg }: { msg: Message }) {
   const isUser = msg.role === "user";
   const isMobile = useIsMobile();
@@ -318,9 +328,11 @@ function MsgBubble({ msg }: { msg: Message }) {
             fontSize: 14,
             lineHeight: 1.6,
             color: "var(--text-primary)",
+            whiteSpace: "pre-wrap",
+            wordWrap: "break-word",
           }}
         >
-          {msg.text}
+          {renderTextWithBold(msg.text)}
         </div>
       </div>
     );
@@ -356,7 +368,7 @@ function MsgBubble({ msg }: { msg: Message }) {
           }}
         >
           {msg.error ? (
-            <p style={{ margin: 0, color: "#f87171", fontSize: 13 }}>Error: {msg.error}</p>
+            <p style={{ margin: 0, color: "#f87171", fontSize: 13, whiteSpace: "pre-wrap" }}>Error: {renderTextWithBold(msg.error)}</p>
           ) : msg.data ? (
             <>
               <IntentBadge intent={msg.data.intent} />
