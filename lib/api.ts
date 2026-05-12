@@ -33,6 +33,7 @@ export interface IngestResponse {
   entities_updated: { id: string; template: string | Record<string, unknown> }[];
   facts_created: { id: string; subject_id: string; predicate: string; object_id?: string; object_value?: string; confidence: number }[];
   templates_created: string[];
+  project_id?: string | null;  // proyecto auto-detectado o especificado
   message: string;
   usage?: TokenUsage;
 }
@@ -175,6 +176,85 @@ export async function inferTemplate(description: string): Promise<Template> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ description, user_id: getUserId() }),
   });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+// ─── Projects ──────────────────────────────────────────────────────────────────
+
+export interface Project {
+  id: string;
+  user_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  canonical_type: string | null;
+  status: "active" | "archived";
+  allow_cross_project_visibility: boolean;
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  entity_count?: number;
+  member_count?: number;
+}
+
+export interface ProjectMember {
+  membership_id: string;
+  entity_id: string;
+  role: string;
+  attributes: Record<string, unknown>;
+  is_active: boolean;
+  joined_at: string;
+  entity_data: Record<string, unknown>;
+  entity_template: string;
+}
+
+export interface ProjectEntity {
+  id: string;
+  template: string;
+  data: Record<string, unknown>;
+  created_at: string;
+}
+
+export async function listProjects(): Promise<Project[]> {
+  const res = await fetch(`${BASE_URL}/projects/?user_id=${getUserId()}&status=active`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getProject(id: string): Promise<Project> {
+  const res = await fetch(`${BASE_URL}/projects/${id}?user_id=${getUserId()}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function createProject(name: string, description?: string): Promise<Project> {
+  const res = await fetch(`${BASE_URL}/projects/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: getUserId(), name, description: description || null }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function deleteProject(id: string, cascade = false): Promise<void> {
+  await fetch(`${BASE_URL}/projects/${id}?user_id=${getUserId()}&cascade=${cascade}`, {
+    method: "DELETE",
+  });
+}
+
+export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/members?user_id=${getUserId()}`);
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+export async function getProjectEntities(projectId: string, template?: string): Promise<ProjectEntity[]> {
+  const url = template
+    ? `${BASE_URL}/projects/${projectId}/entities?user_id=${getUserId()}&template=${template}`
+    : `${BASE_URL}/projects/${projectId}/entities?user_id=${getUserId()}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }

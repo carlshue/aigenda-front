@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback, useState } from "react";
 import { sendChat, IngestResponse, QueryResponse, InteractResponse, ChatResponse, TokenUsage, DeleteResponse } from "@/lib/api";
 import { useChatContext, Message } from "@/lib/chat-context";
 import { useIsMobile } from "@/lib/useIsMobile";
+import { useProjects } from "@/lib/project-context";
 
 function TokenBadge({ usage }: { usage: TokenUsage }) {
   return (
@@ -23,6 +24,26 @@ function TokenBadge({ usage }: { usage: TokenUsage }) {
   );
 }
 
+function ProjectTag({ projectId }: { projectId: string }) {
+  const { projects } = useProjects();
+  const project = projects.find((p) => p.id === projectId);
+  if (!project) return null;
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      padding: "2px 8px", borderRadius: 999, marginBottom: 6,
+      fontSize: 11, fontWeight: 600,
+      background: "var(--accent-dim)", color: "var(--accent)",
+      border: "1px solid var(--accent)44",
+    }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      </svg>
+      {project.name}
+    </span>
+  );
+}
+
 function IngestResult({ data }: { data: IngestResponse }) {
   const created = data.entities_created ?? [];
   const updated = data.entities_updated ?? [];
@@ -35,6 +56,7 @@ function IngestResult({ data }: { data: IngestResponse }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {data.project_id && <ProjectTag projectId={data.project_id} />}
       {data.message && (
         <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)", fontStyle: "italic" }}>
           {data.message}
