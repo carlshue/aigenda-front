@@ -4,8 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getCurrentUser, logout } from "@/lib/auth";
+import { ProjectSelector } from "./ProjectSelector";
 
 const NAV_ITEMS = [
+  {
+    href: "/projects",
+    label: "Proyectos",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="7" height="7" />
+        <rect x="14" y="3" width="7" height="7" />
+        <rect x="14" y="14" width="7" height="7" />
+        <rect x="3" y="14" width="7" height="7" />
+      </svg>
+    ),
+  },
   {
     href: "/chat",
     label: "Chat",
@@ -108,6 +121,13 @@ export default function Sidebar() {
           </span>
         )}
       </div>
+
+      {/* Project Selector */}
+      {!isMobile && (
+        <div style={{ padding: "0 8px 16px", marginBottom: 8, borderBottom: "1px solid var(--border)" }}>
+          <ProjectSelector />
+        </div>
+      )}
 
       {/* Nav items */}
       <nav style={{ display: "flex", flexDirection: "column", gap: 2 }}>

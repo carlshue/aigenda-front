@@ -3,7 +3,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { ChatProvider } from "@/lib/chat-context";
 import { ProjectProvider } from "@/lib/project-context";
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
+export default function ProjectLayout({ children, params }: { children: React.ReactNode; params: { projectId: string } }) {
   return (
     <ProtectedRoute>
       <ProjectProvider>

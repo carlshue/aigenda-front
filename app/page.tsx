@@ -10,7 +10,7 @@ export default function HomePage() {
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
-      router.push("/chat");
+      router.push("/projects");
     } else {
       router.push("/login");
     }
