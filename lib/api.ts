@@ -2,9 +2,7 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 function getToken(): string {
   if (typeof window === "undefined") return "";
-  const token = localStorage.getItem("genda:token");
-  if (!token) throw new Error("No token found");
-  return token;
+  return localStorage.getItem("genda:token") || "";
 }
 
 function getHeaders(): HeadersInit {
@@ -196,7 +194,7 @@ export async function inferTemplate(description: string): Promise<Template> {
   const res = await fetch(`${BASE_URL}/templates/infer`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ description, user_id: getUserId() }),
+    body: JSON.stringify({ description }),
   });
   await handleResponse(res);
   return res.json();
@@ -254,7 +252,7 @@ export async function createProject(name: string, description?: string): Promise
   const res = await fetch(`${BASE_URL}/projects/`, {
     method: "POST",
     headers: getHeaders(),
-    body: JSON.stringify({ user_id: getUserId(), name, description: description || null }),
+    body: JSON.stringify({ name, description: description || null }),
   });
   await handleResponse(res);
   return res.json();

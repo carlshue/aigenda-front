@@ -21,7 +21,7 @@ export default function ProjectsPage() {
       setNewDescription('');
       setIsCreating(false);
       setCurrentProject(project);
-      router.push(`/projects/${project.id}/chat`);
+      router.push(`/projects/${project.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
     }
@@ -46,7 +46,7 @@ export default function ProjectsPage() {
     const project = projects.find(p => p.id === projectId);
     if (project) {
       setCurrentProject(project);
-      router.push(`/projects/${projectId}/chat`);
+      router.push(`/projects/${projectId}`);
     }
   };
 

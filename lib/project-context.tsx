@@ -7,8 +7,8 @@ import { getCurrentUser } from "./auth";
 
 interface ProjectContextValue {
   projects: Project[];
-  activeProject: Project | null;
-  setActiveProject: (p: Project | null) => void;
+  currentProject: Project | null;
+  setCurrentProject: (p: Project | null) => void;
   loading: boolean;
   refresh: () => Promise<void>;
   createProject: (name: string, description?: string) => Promise<Project>;
@@ -19,7 +19,7 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [activeProject, setActiveProject] = useState<Project | null>(null);
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -30,15 +30,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       const data = await listProjects();
       setProjects(data);
       // Si el proyecto activo fue borrado/archivado, limpiar
-      if (activeProject && !data.find((p) => p.id === activeProject.id)) {
-        setActiveProject(null);
+      if (currentProject && !data.find((p) => p.id === currentProject.id)) {
+        setCurrentProject(null);
       }
     } catch (e) {
       console.error("[projects] Error loading:", e);
     } finally {
       setLoading(false);
     }
-  }, [activeProject]);
+  }, [currentProject]);
 
   useEffect(() => {
     refresh();
@@ -52,13 +52,13 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   async function deleteProject(id: string, cascade = false): Promise<void> {
     await apiDeleteProject(id, cascade);
-    if (activeProject?.id === id) setActiveProject(null);
+    if (currentProject?.id === id) setCurrentProject(null);
     await refresh();
   }
 
   return (
     <ProjectContext.Provider
-      value={{ projects, activeProject, setActiveProject, loading, refresh, createProject, deleteProject }}
+      value={{ projects, currentProject, setCurrentProject, loading, refresh, createProject, deleteProject }}
     >
       {children}
     </ProjectContext.Provider>

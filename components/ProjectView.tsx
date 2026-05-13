@@ -324,8 +324,10 @@ export default function ProjectView({ projectId }: { projectId: string }) {
               onClick={() => setTab(t.id)}
               style={{
                 padding: "8px 16px",
+                borderTop: "none",
+                borderLeft: "none",
+                borderRight: "none",
                 borderBottom: tab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
-                border: "none",
                 background: "transparent",
                 color: tab === t.id ? "var(--text-primary)" : "var(--text-secondary)",
                 fontWeight: tab === t.id ? 600 : 400,
