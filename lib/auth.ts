@@ -1,22 +1,21 @@
-const VALID_USERS = ["carlos", "maría"];
-
-export function isValidUser(username: string): boolean {
-  return VALID_USERS.includes(username.toLowerCase());
+interface User {
+  user_id: string;
+  email: string;
+  name: string;
 }
 
-export function getCurrentUser(): string | null {
+export function getCurrentUser(): User | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("currentUser");
-}
-
-export function setCurrentUser(username: string): void {
-  if (typeof window === "undefined") return;
-  if (isValidUser(username)) {
-    localStorage.setItem("currentUser", username.toLowerCase());
+  const userStr = localStorage.getItem("genda:user");
+  if (!userStr) return null;
+  try {
+    return JSON.parse(userStr);
+  } catch {
+    return null;
   }
 }
 
-export function logout(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem("currentUser");
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("genda:token");
 }

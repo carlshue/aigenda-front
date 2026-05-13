@@ -1,11 +1,33 @@
-import { getCurrentUser } from "./auth";
-
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
-function getUserId(): string {
-  const user = getCurrentUser();
-  if (!user) throw new Error("No user logged in");
-  return user;
+function getToken(): string {
+  if (typeof window === "undefined") return "";
+  const token = localStorage.getItem("genda:token");
+  if (!token) throw new Error("No token found");
+  return token;
+}
+
+function getHeaders(): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${getToken()}`,
+  };
+}
+
+async function handleResponse(res: Response) {
+  if (res.status === 401) {
+    // Token expirado o inválido
+    localStorage.removeItem("genda:token");
+    localStorage.removeItem("genda:user");
+    if (typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+    throw new Error("Sesión expirada");
+  }
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+  return res;
 }
 
 function localISOString(date: Date): string {
@@ -99,40 +121,40 @@ export async function sendChat(
   const now = new Date();
   const res = await fetch(`${BASE_URL}/chat/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify({
       text,
-      user_id: getUserId(),
       timestamp: localISOString(now),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       context,
     }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
 export async function getTemplates(): Promise<Template[]> {
-  const res = await fetch(`${BASE_URL}/templates/?user_id=${getUserId()}`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/templates/`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function getTemplatesStats(): Promise<TemplateStats[]> {
-  const res = await fetch(`${BASE_URL}/templates/stats/summary?user_id=${getUserId()}`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/templates/stats/summary`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  await fetch(`${BASE_URL}/templates/${id}?user_id=${getUserId()}`, { method: "DELETE" });
+  await fetch(`${BASE_URL}/templates/${id}`, { method: "DELETE" });
 }
 
 export async function getEntities(limit = 100): Promise<Entity[]> {
   const res = await fetch(
-    `${BASE_URL}/entities/?user_id=${getUserId()}&limit=${limit}`
+    `${BASE_URL}/entities/?limit=${limit}`,
+    { headers: getHeaders() }
   );
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
@@ -159,24 +181,24 @@ export interface Fact {
 }
 
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
-  const res = await fetch(`${BASE_URL}/entities/calendar/events?user_id=${getUserId()}`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/entities/calendar/events`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function getEntityFacts(entityId: string): Promise<Fact[]> {
-  const res = await fetch(`${BASE_URL}/facts/entity/${entityId}?user_id=${getUserId()}&direction=all`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/facts/entity/${entityId}&direction=all`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function inferTemplate(description: string): Promise<Template> {
   const res = await fetch(`${BASE_URL}/templates/infer`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify({ description, user_id: getUserId() }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
@@ -217,44 +239,44 @@ export interface ProjectEntity {
 }
 
 export async function listProjects(): Promise<Project[]> {
-  const res = await fetch(`${BASE_URL}/projects/?user_id=${getUserId()}&status=active`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/projects/&status=active`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function getProject(id: string): Promise<Project> {
-  const res = await fetch(`${BASE_URL}/projects/${id}?user_id=${getUserId()}`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/projects/${id}`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function createProject(name: string, description?: string): Promise<Project> {
   const res = await fetch(`${BASE_URL}/projects/`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: getHeaders(),
     body: JSON.stringify({ user_id: getUserId(), name, description: description || null }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }
 
 export async function deleteProject(id: string, cascade = false): Promise<void> {
-  await fetch(`${BASE_URL}/projects/${id}?user_id=${getUserId()}&cascade=${cascade}`, {
+  await fetch(`${BASE_URL}/projects/${id}&cascade=${cascade}`, {
     method: "DELETE",
   });
 }
 
 export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
-  const res = await fetch(`${BASE_URL}/projects/${projectId}/members?user_id=${getUserId()}`);
-  if (!res.ok) throw new Error(await res.text());
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/members`);
+  await handleResponse(res);
   return res.json();
 }
 
 export async function getProjectEntities(projectId: string, template?: string): Promise<ProjectEntity[]> {
   const url = template
-    ? `${BASE_URL}/projects/${projectId}/entities?user_id=${getUserId()}&template=${template}`
-    : `${BASE_URL}/projects/${projectId}/entities?user_id=${getUserId()}`;
+    ? `${BASE_URL}/projects/${projectId}/entities&template=${template}`
+    : `${BASE_URL}/projects/${projectId}/entities`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error(await res.text());
+  await handleResponse(res);
   return res.json();
 }

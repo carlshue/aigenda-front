@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { useAuth } from "@/lib/auth-context";
 import { useProjects } from "@/lib/project-context";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -172,16 +172,12 @@ const GLOBAL_NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const { user, logout } = useAuth();
   const [isMobile, setIsMobile] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const { projects, loading: projectsLoading, createProject, deleteProject } = useProjects();
-
-  useEffect(() => {
-    setCurrentUser(getCurrentUser());
-  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -383,7 +379,7 @@ export default function Sidebar() {
             <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 10px 6px" }}>
               LLM Memory & Agenda
             </p>
-            {currentUser && (
+            {user && (
               <>
                 <div style={{
                   padding: "7px 8px", borderRadius: 6,
@@ -392,8 +388,11 @@ export default function Sidebar() {
                   <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 3px", textTransform: "uppercase" }}>
                     Usuario
                   </p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0, textTransform: "capitalize" }}>
-                    {currentUser}
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0 }}>
+                    {user.name}
+                  </p>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "3px 0 0", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {user.email}
                   </p>
                 </div>
                 <button
