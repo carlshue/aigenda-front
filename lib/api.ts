@@ -134,19 +134,19 @@ export async function sendChat(
 }
 
 export async function getTemplates(): Promise<Template[]> {
-  const res = await fetch(`${BASE_URL}/templates/`);
+  const res = await fetch(`${BASE_URL}/templates/`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
 
 export async function getTemplatesStats(): Promise<TemplateStats[]> {
-  const res = await fetch(`${BASE_URL}/templates/stats/summary`);
+  const res = await fetch(`${BASE_URL}/templates/stats/summary`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
 
 export async function deleteTemplate(id: string): Promise<void> {
-  await fetch(`${BASE_URL}/templates/${id}`, { method: "DELETE" });
+  await fetch(`${BASE_URL}/templates/${id}`, { method: "DELETE", headers: getHeaders() });
 }
 
 export async function getEntities(limit = 100): Promise<Entity[]> {
@@ -181,13 +181,13 @@ export interface Fact {
 }
 
 export async function getCalendarEvents(): Promise<CalendarEvent[]> {
-  const res = await fetch(`${BASE_URL}/entities/calendar/events`);
+  const res = await fetch(`${BASE_URL}/entities/calendar/events`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
 
 export async function getEntityFacts(entityId: string): Promise<Fact[]> {
-  const res = await fetch(`${BASE_URL}/facts/entity/${entityId}&direction=all`);
+  const res = await fetch(`${BASE_URL}/facts/entity/${entityId}?direction=all`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
@@ -239,13 +239,13 @@ export interface ProjectEntity {
 }
 
 export async function listProjects(): Promise<Project[]> {
-  const res = await fetch(`${BASE_URL}/projects/&status=active`);
+  const res = await fetch(`${BASE_URL}/projects/?status=active`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
 
 export async function getProject(id: string): Promise<Project> {
-  const res = await fetch(`${BASE_URL}/projects/${id}`);
+  const res = await fetch(`${BASE_URL}/projects/${id}`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
@@ -261,22 +261,23 @@ export async function createProject(name: string, description?: string): Promise
 }
 
 export async function deleteProject(id: string, cascade = false): Promise<void> {
-  await fetch(`${BASE_URL}/projects/${id}&cascade=${cascade}`, {
+  await fetch(`${BASE_URL}/projects/${id}?cascade=${cascade}`, {
     method: "DELETE",
+    headers: getHeaders(),
   });
 }
 
 export async function getProjectMembers(projectId: string): Promise<ProjectMember[]> {
-  const res = await fetch(`${BASE_URL}/projects/${projectId}/members`);
+  const res = await fetch(`${BASE_URL}/projects/${projectId}/members`, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }
 
 export async function getProjectEntities(projectId: string, template?: string): Promise<ProjectEntity[]> {
   const url = template
-    ? `${BASE_URL}/projects/${projectId}/entities&template=${template}`
+    ? `${BASE_URL}/projects/${projectId}/entities?template=${template}`
     : `${BASE_URL}/projects/${projectId}/entities`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: getHeaders() });
   await handleResponse(res);
   return res.json();
 }

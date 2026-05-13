@@ -1,12 +1,12 @@
 'use client';
 
-import { useProject } from '@/lib/project-context';
+import { useProjects } from '@/lib/project-context';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 export default function ProjectsPage() {
-  const { projects, currentProject, createProject, deleteProject, setCurrentProject } = useProject();
+  const { projects, currentProject, createProject, deleteProject, setCurrentProject } = useProjects();
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
