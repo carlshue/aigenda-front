@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getTemplates, getEntities, getCalendarEvents, Template, Entity, CalendarEvent as ApiCalendarEvent } from "@/lib/api";
+import { getTemplates, getEntities, getCalendarEvents, getGoogleCalendarStatus, syncGoogleCalendar, Template, Entity, CalendarEvent as ApiCalendarEvent } from "@/lib/api";
 import { useIsMobile } from "@/lib/useIsMobile";
 
 interface CalendarEvent {
@@ -183,6 +183,9 @@ export default function CalendarView() {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   const load = useCallback(async () => {
@@ -266,6 +269,33 @@ export default function CalendarView() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    getGoogleCalendarStatus()
+      .then((s) => setGoogleConnected(s.connected))
+      .catch(() => setGoogleConnected(false));
+  }, []);
+
+  const handleGoogleSync = async () => {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const result = await syncGoogleCalendar();
+      setSyncMsg(`Sincronizado: ${result.created} nuevos, ${result.updated} actualizados`);
+      load();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("no_calendar_scope")) {
+        setSyncMsg("Sin permisos de calendario. Reconecta Google.");
+        setGoogleConnected(false);
+      } else {
+        setSyncMsg("Error al sincronizar");
+      }
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMsg(null), 4000);
+    }
+  };
 
   const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
   const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -395,30 +425,91 @@ export default function CalendarView() {
             >
               {monthName}
             </h2>
-            <button
-              onClick={load}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid var(--border)",
-                background: "var(--bg-surface)",
-                color: "var(--text-secondary)",
-                fontSize: 13,
-                cursor: "pointer",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-surface)")}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-              Actualizar
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={load}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px",
+                    borderRadius: 6,
+                    border: "1px solid var(--border)",
+                    background: "var(--bg-surface)",
+                    color: "var(--text-secondary)",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-elevated)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-surface)")}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  Actualizar
+                </button>
+                {googleConnected === false ? (
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL}/auth/google/calendar`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      border: "1px solid #4285f4",
+                      background: "var(--bg-surface)",
+                      color: "#4285f4",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      textDecoration: "none",
+                      transition: "background 0.15s",
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    Conectar Google Calendar
+                  </a>
+                ) : googleConnected === true ? (
+                  <button
+                    onClick={handleGoogleSync}
+                    disabled={syncing}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 12px",
+                      borderRadius: 6,
+                      border: "1px solid #4285f4",
+                      background: syncing ? "var(--bg-elevated)" : "var(--bg-surface)",
+                      color: "#4285f4",
+                      fontSize: 13,
+                      cursor: syncing ? "not-allowed" : "pointer",
+                      transition: "background 0.15s",
+                      opacity: syncing ? 0.7 : 1,
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    </svg>
+                    {syncing ? "Sincronizando..." : "Sincronizar Google Calendar"}
+                  </button>
+                ) : null}
+              </div>
+              {syncMsg && (
+                <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>{syncMsg}</span>
+              )}
+            </div>
           </div>
 
           {/* Legend */}
