@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -50,5 +50,36 @@ export default function AuthCallbackPage() {
       </p>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        display: 'flex',
+        height: '100vh',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-base)',
+        flexDirection: 'column',
+        gap: 12,
+      }}>
+        <div style={{
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          border: '3px solid var(--border)',
+          borderTopColor: 'var(--accent)',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', margin: 0 }}>
+          Iniciando sesión...
+        </p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
