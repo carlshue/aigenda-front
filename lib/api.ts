@@ -279,3 +279,30 @@ export async function getProjectEntities(projectId: string, template?: string): 
   await handleResponse(res);
   return res.json();
 }
+
+// ─── Google Calendar Sync ───────────────────────────────────────────────────────
+
+export interface GoogleCalendarStatus {
+  connected: boolean;
+}
+
+export interface GoogleCalendarSyncResult {
+  created: number;
+  updated: number;
+  total: number;
+}
+
+export async function getGoogleCalendarStatus(): Promise<GoogleCalendarStatus> {
+  const res = await fetch(`${BASE_URL}/calendar/google/status`, { headers: getHeaders() });
+  await handleResponse(res);
+  return res.json();
+}
+
+export async function syncGoogleCalendar(): Promise<GoogleCalendarSyncResult> {
+  const res = await fetch(`${BASE_URL}/calendar/google/sync`, {
+    method: "POST",
+    headers: getHeaders(),
+  });
+  await handleResponse(res);
+  return res.json();
+}
