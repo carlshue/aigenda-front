@@ -205,12 +205,35 @@ export default function CalendarView() {
       if (apiEvents && apiEvents.length > 0) {
         // Usar eventos del API
         apiEvents.forEach((evt) => {
+          const dateMatch = String(evt.date).match(/^(\d{4}-\d{2}-\d{2})/);
+          const dateStr = dateMatch ? dateMatch[1] : evt.date;
+
+          if (evt.template === "google_calendar") {
+            extractedEvents.push({
+              id: evt.id,
+              title: evt.title,
+              date: dateStr,
+              template: "google_calendar",
+              templateName: "Google Calendar",
+              color: "#4285f4",
+              entity: {
+                id: evt.id,
+                template_id: "google_calendar",
+                data: evt.data,
+                original_text: null,
+                is_canonical: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              dateFieldName: "inicio",
+            });
+            return;
+          }
+
           const template = t.find((x) => x.name === evt.template);
           if (template) {
             const colorIndex = t.findIndex((x) => x.id === template.id);
             const color = getColorForTemplate(template.name, colorIndex);
-            const dateMatch = String(evt.date).match(/^(\d{4}-\d{2}-\d{2})/);
-            const dateStr = dateMatch ? dateMatch[1] : evt.date;
 
             extractedEvents.push({
               id: evt.id,
@@ -513,7 +536,7 @@ export default function CalendarView() {
           </div>
 
           {/* Legend */}
-          {templates.length > 0 && (
+          {(templates.length > 0 || events.some((e) => e.template === "google_calendar")) && (
             <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
               {templates.map((t, idx) => {
                 const hasEvents = events.some((e) => e.template === t.id);
@@ -521,18 +544,17 @@ export default function CalendarView() {
                 const color = getColorForTemplate(t.name, idx);
                 return (
                   <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <div
-                      style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 2,
-                        background: color,
-                      }}
-                    />
+                    <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
                     <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{t.name}</span>
                   </div>
                 );
               })}
+              {events.some((e) => e.template === "google_calendar") && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: "#4285f4" }} />
+                  <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>Google Calendar</span>
+                </div>
+              )}
             </div>
           )}
 
