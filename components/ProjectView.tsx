@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useProjects } from "@/lib/project-context";
-import { getProject, getProjectMembers, getProjectEntities } from "@/lib/api";
-import type { Project, ProjectMember, ProjectEntity } from "@/lib/api";
+import { getProject, getProjectMembers, getProjectEntities, listProjectHooks, forceRunHook, getHookExecutions, toggleHook, deleteHook } from "@/lib/api";
+import type { Project, ProjectMember, ProjectEntity, Hook, HookExecution } from "@/lib/api";
 import { useIsMobile } from "@/lib/useIsMobile";
 
-type Tab = "entidades" | "miembros" | "info";
+type Tab = "entidades" | "miembros" | "hooks" | "info";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,6 +153,157 @@ function MemberCard({ member }: { member: ProjectMember }) {
   );
 }
 
+// ─── HookCard ─────────────────────────────────────────────────────────────────
+
+function HookCard({ hook, onRefresh }: { hook: Hook; onRefresh: () => void }) {
+  const [running, setRunning] = useState(false);
+  const [executions, setExecutions] = useState<HookExecution[] | null>(null);
+  const [showLog, setShowLog] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const flash = (m: string) => { setMsg(m); setTimeout(() => setMsg(null), 3000); };
+
+  const handleRun = async () => {
+    setRunning(true);
+    try {
+      const r = await forceRunHook(hook.id);
+      flash(`Ejecutado — ${r.executed} ok, ${r.failed} errores`);
+      onRefresh();
+    } catch {
+      flash("Error al ejecutar");
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const handleToggle = async () => {
+    try {
+      await toggleHook(hook.id, !hook.is_active);
+      onRefresh();
+    } catch {
+      flash("Error al cambiar estado");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await deleteHook(hook.id);
+      onRefresh();
+    } catch {
+      flash("Error al eliminar");
+    }
+  };
+
+  const handleShowLog = async () => {
+    if (!showLog) {
+      const execs = await getHookExecutions(hook.id, 5);
+      setExecutions(execs);
+    }
+    setShowLog(!showLog);
+  };
+
+  const freq = (hook.trigger_config?.frequency as string) ?? "—";
+  const time = (hook.trigger_config?.time as string) ?? "";
+
+  return (
+    <div style={{
+      background: "var(--bg-surface)", border: "1px solid var(--border)",
+      borderRadius: 8, overflow: "hidden",
+      opacity: hook.is_active ? 1 : 0.6,
+    }}>
+      <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Estado */}
+        <div style={{
+          width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+          background: hook.is_active ? "#22c55e" : "var(--text-muted)",
+        }} />
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{hook.name}</span>
+            <Pill label={hook.hook_type} color="#6366f1" />
+            <Pill label={`${freq}${time ? ` ${time}` : ""}`} color="#06b6d4" />
+          </div>
+          <div style={{ marginTop: 4, display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Última: {hook.last_executed_at ? new Date(hook.last_executed_at).toLocaleString("es-ES") : "nunca"}
+            </span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              Próxima: {hook.next_execution_at ? new Date(hook.next_execution_at).toLocaleString("es-ES") : "—"}
+            </span>
+          </div>
+          {msg && <span style={{ fontSize: 11, color: "var(--accent)", marginTop: 2, display: "block" }}>{msg}</span>}
+        </div>
+
+        {/* Acciones */}
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          <button onClick={handleRun} disabled={running} title="Ejecutar ahora" style={{
+            padding: "5px 10px", borderRadius: 5, border: "1px solid var(--border)",
+            background: "transparent", color: "var(--text-secondary)", fontSize: 11,
+            cursor: running ? "not-allowed" : "pointer", opacity: running ? 0.5 : 1,
+          }}>
+            {running ? "..." : "▶ Run"}
+          </button>
+          <button onClick={handleShowLog} title="Ver log" style={{
+            padding: "5px 10px", borderRadius: 5, border: "1px solid var(--border)",
+            background: "transparent", color: "var(--text-secondary)", fontSize: 11, cursor: "pointer",
+          }}>
+            Log
+          </button>
+          <button onClick={handleToggle} title={hook.is_active ? "Desactivar" : "Activar"} style={{
+            padding: "5px 10px", borderRadius: 5, border: "1px solid var(--border)",
+            background: "transparent", color: hook.is_active ? "#f59e0b" : "#22c55e", fontSize: 11, cursor: "pointer",
+          }}>
+            {hook.is_active ? "Pausar" : "Activar"}
+          </button>
+          <button onClick={handleDelete} title="Eliminar" style={{
+            padding: "5px 8px", borderRadius: 5, border: "1px solid var(--border)",
+            background: "transparent", color: "var(--text-muted)", fontSize: 11, cursor: "pointer",
+          }}>
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {/* Log expandible */}
+      {showLog && (
+        <div style={{ borderTop: "1px solid var(--border)", padding: "10px 14px", background: "var(--bg-elevated)" }}>
+          {executions === null ? (
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Cargando...</p>
+          ) : executions.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>Sin ejecuciones registradas</p>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {executions.map((ex) => (
+                <div key={ex.id} style={{ fontSize: 11, display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <span style={{
+                    color: ex.status === "success" ? "#22c55e" : ex.status === "error" ? "#ef4444" : "var(--text-muted)",
+                    fontWeight: 600, flexShrink: 0,
+                  }}>
+                    {ex.status.toUpperCase()}
+                  </span>
+                  <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>
+                    {new Date(ex.executed_at).toLocaleString("es-ES")}
+                  </span>
+                  {ex.error_message && (
+                    <span style={{ color: "#ef4444" }}>{ex.error_message}</span>
+                  )}
+                  {ex.result && ex.status === "success" && (
+                    <span style={{ color: "var(--text-secondary)", wordBreak: "break-all" }}>
+                      {JSON.stringify(ex.result).slice(0, 120)}…
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main view ────────────────────────────────────────────────────────────────
 
 export default function ProjectView({ projectId }: { projectId: string }) {
@@ -163,6 +314,7 @@ export default function ProjectView({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [entities, setEntities] = useState<ProjectEntity[]>([]);
+  const [hooks, setHooks] = useState<Hook[]>([]);
   const [tab, setTab] = useState<Tab>("entidades");
   const [loading, setLoading] = useState(true);
   const [loadingTab, setLoadingTab] = useState(false);
@@ -192,6 +344,9 @@ export default function ProjectView({ projectId }: { projectId: string }) {
         } else if (tab === "miembros") {
           const data = await getProjectMembers(projectId);
           setMembers(data);
+        } else if (tab === "hooks") {
+          const data = await listProjectHooks(projectId);
+          setHooks(data);
         }
       } catch (e) {
         console.error(e);
@@ -234,6 +389,7 @@ export default function ProjectView({ projectId }: { projectId: string }) {
   const TABS: { id: Tab; label: string }[] = [
     { id: "entidades", label: "Entidades" },
     { id: "miembros", label: "Miembros" },
+    { id: "hooks", label: `Hooks${hooks.length ? ` (${hooks.length})` : ""}` },
     { id: "info", label: "Info" },
   ];
 
@@ -371,6 +527,29 @@ export default function ProjectView({ projectId }: { projectId: string }) {
               </div>
             )}
           </>
+        )}
+
+        {!loadingTab && tab === "hooks" && (
+          <div style={{ maxWidth: 800 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <p style={{ margin: 0, fontSize: 13, color: "var(--text-secondary)" }}>
+                {hooks.length === 0 ? "No hay hooks en esta sección." : `${hooks.filter(h => h.is_active).length} activos de ${hooks.length} total`}
+              </p>
+            </div>
+            {hooks.length === 0 ? (
+              <EmptyState message="Los hooks se crean automáticamente cuando añades eventos con fecha y ubicación, o preferencias. Prueba a decirle al chat: 'Tengo un concierto el sábado en Madrid'." />
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {hooks.map((h) => (
+                  <HookCard
+                    key={h.id}
+                    hook={h}
+                    onRefresh={() => listProjectHooks(projectId).then(setHooks)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {!loadingTab && tab === "info" && (

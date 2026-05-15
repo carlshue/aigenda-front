@@ -280,6 +280,71 @@ export async function getProjectEntities(projectId: string, template?: string): 
   return res.json();
 }
 
+// ─── Hooks ─────────────────────────────────────────────────────────────────────
+
+export interface Hook {
+  id: string;
+  name: string;
+  hook_type: string;
+  trigger_config: Record<string, unknown>;
+  search_config: Record<string, unknown>;
+  is_active: boolean;
+  last_executed_at: string | null;
+  next_execution_at: string | null;
+  created_at: string;
+}
+
+export interface HookExecution {
+  id: string;
+  hook_id: string;
+  executed_at: string;
+  status: "success" | "error" | "skipped";
+  result: Record<string, unknown> | null;
+  error_message: string | null;
+}
+
+export interface HookRunResult {
+  executed: number;
+  failed: number;
+  skipped: number;
+  next_batch_in: string | null;
+}
+
+export async function listProjectHooks(projectId: string): Promise<Hook[]> {
+  const res = await fetch(`${BASE_URL}/hooks/?project_id=${projectId}&active_only=false`, { headers: getHeaders() });
+  await handleResponse(res);
+  return res.json();
+}
+
+export async function runDueHooks(): Promise<HookRunResult> {
+  const res = await fetch(`${BASE_URL}/hooks/run`, { method: "POST", headers: getHeaders() });
+  await handleResponse(res);
+  return res.json();
+}
+
+export async function forceRunHook(hookId: string): Promise<HookRunResult & { hook_id: string }> {
+  const res = await fetch(`${BASE_URL}/hooks/${hookId}/run`, { method: "POST", headers: getHeaders() });
+  await handleResponse(res);
+  return res.json();
+}
+
+export async function getHookExecutions(hookId: string, limit = 10): Promise<HookExecution[]> {
+  const res = await fetch(`${BASE_URL}/hooks/${hookId}/executions?limit=${limit}`, { headers: getHeaders() });
+  await handleResponse(res);
+  return res.json();
+}
+
+export async function toggleHook(hookId: string, enable: boolean): Promise<Hook> {
+  const action = enable ? "enable" : "disable";
+  const res = await fetch(`${BASE_URL}/hooks/${hookId}/${action}`, { method: "PATCH", headers: getHeaders() });
+  await handleResponse(res);
+  return res.json();
+}
+
+export async function deleteHook(hookId: string): Promise<void> {
+  await fetch(`${BASE_URL}/hooks/${hookId}`, { method: "DELETE", headers: getHeaders() });
+}
+
 // ─── Google Calendar Sync ───────────────────────────────────────────────────────
 
 export interface GoogleCalendarStatus {
